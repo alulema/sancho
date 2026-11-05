@@ -1,0 +1,12 @@
+# Rutas protegidas (CLAUDE.md, docs/diseno.md §9.6).
+# Cambiarlas requiere que la spec lo pida explícitamente y señalarlo en el resumen del PR.
+# Formato: una ruta por línea, relativa a la raíz del repo; las que terminan en / cubren
+# todo su contenido. Se agregan aquí a medida que existan.
+
+PROTECTED_PATHS
+eval/
+
+# Previstas por §9.6, sin código todavía:
+# - permisos e identidad (E4)
+# - proxy de salida y canarios (E2, E7)
+# - límites físicos de la luz y el brazo (E11)

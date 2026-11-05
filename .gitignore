@@ -1,0 +1,51 @@
+# Secretos: nunca en el repo (CLAUDE.md, reglas de seguridad)
+.env
+.env.*
+!.env.example
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.passwd
+passwd
+
+# Modelos descargados
+models/
+*.onnx
+*.pt
+*.pth
+*.caffemodel
+*.safetensors
+*.gguf
+*.tflite
+
+# Grabaciones del bus, trazas y logs locales
+recordings/
+traces/
+logs/
+
+# Audio y video crudos: no se guardan en disco
+*.wav
+*.mp3
+*.flac
+*.mp4
+*.avi
+*.mkv
+*.h264
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Sistema y editores
+.DS_Store
+.idea/
+.vscode/
+.claude/settings.local.json
