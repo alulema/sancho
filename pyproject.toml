@@ -1,0 +1,32 @@
+[project]
+name = "sancho"
+version = "0.0.0"
+description = "Asistente personal con presencia física y digital."
+readme = "README.md"
+# Provisional hasta el ADR de T2, que fija la versión de Python por componente (ADR-0005).
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "contracts", "body", "brain", "sim", "eval"]
+pythonpath = ["."]
+addopts = "--strict-markers -m 'not nano'"
+markers = [
+    "nano: requiere el Jetson Nano (cámara CSI, GPU o TensorRT); excluida por defecto",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
