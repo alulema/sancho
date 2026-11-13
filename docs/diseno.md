@@ -1108,8 +1108,8 @@ Afirmaciones técnicas del documento que dependen de compatibilidades o rendimie
 | S3 | Kev no corre en el Nano | Inferido de Python 3.12+/PyTorch frente a JetPack 4.6; el README no lo dice | Intentarlo en E5 (experimento de port) |
 | S4 | Kev-4B en el Orin | El README lista GPUs grandes para 4B | Medir memoria y latencia si se compra el Orin |
 | S5 | Alternar entre Kev y Jev con el mismo cliente | El README confirma la compatibilidad hacia Kev local; la inversa se infiere | Prueba con el SDK de TypeSafe en E5 |
-| S6 | Contenedores con Python moderno en JetPack 4.6 con acceso a GPU | Imágenes `l4t` r32 están atadas a la pila antigua | Prueba en E0 |
-| S7 | LUKS + Clevis/Tang en el Nano con Ubuntu 18.04 | Disponibilidad de paquetes y arranque con partición cifrada | Prueba en E0 |
+| S6 | Python moderno (≥ 3.10) en JetPack 4.6 con acceso a la cámara CSI, en contenedor o fuera de él | Las imágenes `l4t` r32 están atadas a la pila antigua y la cámara pasa por `nvarguscamerasrc` | Prueba en E0 (T2 de `SPEC_E0.md`) |
+| S7 | LUKS + Clevis/Tang en el Nano con Ubuntu 18.04 | Disponibilidad de paquetes y desbloqueo de la partición cifrada al arrancar | Prueba al inicio de E1, antes de guardar la galería (§5.9). E0 solo deja espacio sin asignar en el SSD para esa partición |
 | S8 | MediaPipe Hands en el Nano | Sin soporte oficial de GPU en Jetson | Comparar con `trt_pose` en E3 |
 | S9 | Disparidad estéreo con NVIDIA VPI en el Nano | No aplica: el Nano es A02 (un solo puerto CSI) | — |
 | S10 | Vitis AI no soporta Zynq-7000; un solo conector Pcam en la Zybo Z7 | Basado en conocimiento general, no verificado en la documentación de Digilent/AMD | Revisar documentación antes de iniciar la pista FPGA |
@@ -1125,3 +1125,4 @@ Afirmaciones técnicas del documento que dependen de compatibilidades o rendimie
 | S20 | Kev y un LLM de 0.5–1.5B con velocidad útil en la CPU de un Raspberry Pi 5 | No medido | Benchmark antes de comprar el Pi 5 como núcleo |
 | S21 | Los modelos de percepción necesarios se convierten a RKNN sin pérdida importante | Conversión con tamaños fijos y versiones estrictas | Prueba con un modelo de E1 antes de elegir la Orange Pi 5 |
 | S22 | "Oye, Sancho" se detecta con pocas falsas activaciones y no se confunde con nombres o palabras frecuentes en casa | Depende del modelo entrenado y del entorno | Medición en E2 |
+| S23 | Python moderno con acceso a la GPU (CUDA 10.2, TensorRT 8.2) en el Nano | JetPack 4.6 trae los enlaces de Python de TensorRT para su Python del sistema; con otra versión podría hacer falta compilarlos o separar la inferencia en un proceso aparte | Prueba al inicio de E1, cuando la detección pase a la GPU |
