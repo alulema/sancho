@@ -50,7 +50,7 @@ Otros resultados:
 
 ## Pendientes para la próxima sesión
 
-- Probar la vía en contenedor cuando el sistema esté en el SSD (T3).
+- ~~Probar la vía en contenedor~~: hecho el mismo día, ver `2026-11-13-t2-contenedor.md`.
 - Medir cuántos cps logra un detector DNN de OpenCV en CPU con Python 3.12 (T6).
 - Limpieza en el Nano: `~/t2-probe` y el enlace `~/.local/bin/python3.12` que creó `uv python install`.
 
