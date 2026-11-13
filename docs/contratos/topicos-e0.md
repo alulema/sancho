@@ -1,4 +1,4 @@
-# Contrato: tópicos de E0 — v0.1
+# Contrato: tópicos de E0 — v0.2
 
 ## Convenciones
 
@@ -6,7 +6,7 @@
 - **El dueño es el componente que implementa la capacidad.** Publica sus eventos y recibe sus comandos.
 - **Eventos** (`evt`): hechos ocurridos, en pasado. Solo los publica el dueño.
 - **Comandos** (`cmd`): pedidos al dueño, en imperativo. Los publican otros componentes autorizados por ACL.
-- El campo `type` del sobre es `<capacidad>.<nombre>` (por ejemplo, `vision.person_entered`).
+- El campo `type` del sobre es `<capacidad>.<nombre>` (por ejemplo, `vision.person_entered`). En los mensajes de salud es `sys.health`.
 
 ## Tópicos
 
@@ -16,22 +16,29 @@
 | `sancho/body/vision/evt/person_left` | evento | body | brain | `track_id`, `duration_s` (número) |
 | `sancho/body/speech/cmd/say` | comando | brain | body | `say_id` (UUID), `text` (string), `lang` (`es`, `en`, `pt`), `priority` (`normal`, `high`) |
 | `sancho/body/speech/evt/status` | evento | body | brain | `say_id`, `state` (`started`, `finished`, `error`), `error` (string, opcional) |
-| `sancho/sys/<componente>/health` | estado retenido | cada componente | todos | `status` (`online`, `offline`), `version` (string), `uptime_s` (número) |
+| `sancho/sys/<componente>/health` | estado retenido | cada servicio | todos | `status` (`online`, `offline`), `version` (string), `uptime_s` (número), `last_will` (booleano, opcional) |
 
 ## Salud y *last will*
 
-- Al conectarse, cada componente publica `health` con `status: online` y el indicador *retain*.
-- Cada componente registra un *last will* en `sancho/sys/<componente>/health` con `status: offline` y *retain*.
+Publican salud los **servicios**: `body`, `brain` y `sim`, que reemplaza a `body` y usa `sancho/sys/body/health`. Las **herramientas** (`recorder`, `replay`, `eval`) no publican salud: corren por sesión y no hay nada que dependa de ellas.
+
+- **Al conectarse:** el servicio publica `health` con `status: online` y *retain*.
+- ***Last will*:** al conectarse, registra un mensaje en su tópico de salud con `status: offline`, `last_will: true`, `uptime_s: 0` y *retain*, dentro del sobre común.
+- **Marcas del *last will*:** el broker entrega el mensaje tal como se registró, así que su `ts` es el momento de la conexión, no el de la caída. El momento de la caída es cuando se recibe el mensaje. Nadie debe calcular duraciones ni latencias con ese `ts`.
+- **Cierre ordenado:** el broker descarta el *last will* en una desconexión normal. Antes de desconectarse, el servicio publica `status: offline` con *retain*, con su `ts` y `uptime_s` reales y sin `last_will`.
 
 ## ACL de E0
 
-| Componente | Puede publicar | Puede suscribirse |
-|---|---|---|
-| body | `sancho/body/#`, `sancho/sys/body/health` | `sancho/body/+/cmd/#`, `sancho/sys/#` |
-| brain | `sancho/body/+/cmd/#`, `sancho/sys/brain/health` | `sancho/body/+/evt/#`, `sancho/sys/#` |
-| sim | lo mismo que body | lo mismo que body |
-| eval | todo `sancho/#` (solo en el entorno de pruebas) | todo `sancho/#` |
-| recorder | nada | todo `sancho/#` |
+| Componente | Entorno | Puede publicar | Puede suscribirse |
+|---|---|---|---|
+| body | producción y pruebas | `sancho/body/+/evt/#`, `sancho/sys/body/health` | `sancho/body/+/cmd/#`, `sancho/sys/#` |
+| brain | producción y pruebas | `sancho/body/+/cmd/#`, `sancho/sys/brain/health` | `sancho/body/+/evt/#`, `sancho/sys/#` |
+| recorder | producción y pruebas | nada | todo `sancho/#` |
+| sim | solo pruebas | lo mismo que body | lo mismo que body |
+| replay | solo pruebas | `sancho/body/+/evt/#` | nada |
+| eval | solo pruebas | todo `sancho/#` | todo `sancho/#` |
+
+El broker de producción, en el Nano, no tiene credenciales para los componentes de "solo pruebas": podrían hacerse pasar por el cuerpo.
 
 ## Reglas
 

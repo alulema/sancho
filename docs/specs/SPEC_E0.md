@@ -71,7 +71,7 @@ Cada tarea termina con su criterio de aceptación cumplido y, cuando aplique, un
 - **Aceptación:** ADR con la versión de Python por componente y la evidencia (comandos ejecutados y resultado). Entrada de bitácora con el supuesto S6 confirmado o refutado.
 
 ### T3 — Sistema en el SSD
-- Sistema raíz del Nano en el SSD de 500 GB (el cargador de arranque puede quedar en la microSD si el método lo requiere).
+- Sistema raíz del Nano en el SSD de 250 GB (el cargador de arranque puede quedar en la microSD si el método lo requiere).
 - **Aceptación:** el Nano arranca con el sistema raíz en el SSD; método documentado en un ADR; prueba de reinicio exitosa.
 
 ### T4 — Bus MQTT

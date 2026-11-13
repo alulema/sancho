@@ -3,7 +3,7 @@
 > **Nombre:** Sancho (ADR-0004)
 > **Autor:** Alexis
 > **Estado:** Versión 1.4
-> **Última actualización:** 2026-11-03
+> **Última actualización:** 2026-11-07
 
 ---
 
@@ -249,7 +249,7 @@ Correos, páginas web y resultados de herramientas son **datos no confiables**.
 
 ### 5.5 Protección de la memoria y datos en reposo
 
-La memoria, la biometría y las trazas viven en el **SSD de 500 GB** y solo pueden leerlas Alexis (a través del asistente, con identidad verificada) y el propio orquestador.
+La memoria, la biometría y las trazas viven en el **SSD de 250 GB** y solo pueden leerlas Alexis (a través del asistente, con identidad verificada) y el propio orquestador.
 
 **Particiones**
 
@@ -573,7 +573,7 @@ Un mini proyector sobre la mesa dibuja interfaces que se "presionan" con el dedo
 ## 7. Hardware
 
 ### 7.1 Disponible
-- Jetson Nano Developer Kit **A02** (un solo puerto CSI), Raspberry Pi Camera V2.1 (IMX219), SSD de 500 GB
+- Jetson Nano Developer Kit **A02** (un solo puerto CSI), Raspberry Pi Camera V2.1 (IMX219), SSD de 250 GB (HIKSEMI MD202)
 - Zybo Z7-10 (Zynq-7010) para la pista FPGA
 - Microservos SG90 ×10, steppers 28BYJ-48 ×5, drivers TB6612FNG / L9110S
 - Arduino Nano / Pro Mini, NodeMCU / ESP8266, nRF24L01 (+PA+LNA), LoRa E32, ZigBee XL2530, Bluetooth JY-MCU
