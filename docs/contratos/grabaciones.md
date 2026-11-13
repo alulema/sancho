@@ -6,7 +6,7 @@ Una grabación guarda los mensajes de una sesión para reproducirlos después (T
 - Solo contiene mensajes del bus: ningún mensaje lleva imágenes, video ni audio.
 
 ```json
-{"rec_v": "0.1", "t_ms": 1250, "topic": "sancho/body/vision/evt/person_entered", "retained": false, "message": {"v": "0.1", "id": "2f6c1a2e-8a7b-4c1d-9e0f-3b5a6c7d8e9f", "ts": "2026-11-03T18:20:00.123Z", "source": "body", "type": "vision.person_entered", "trace_id": "9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d", "payload": {"track_id": "t1", "confidence": 0.92, "bbox": [0.4, 0.3, 0.2, 0.3]}}}
+{"rec_v": "0.1", "t_ms": 1250, "topic": "sancho/body/vision/evt/person_entered", "retained": false, "message": {"v": "0.1", "id": "2f6c1a2e-8a7b-4c1d-9e0f-3b5a6c7d8e9f", "ts": "2026-11-03T18:20:00.123Z", "source": "body", "type": "vision.person_entered", "trace_id": "9a8b7c6d-5e4f-4a3b-8c1d-0e9f8a7b6c5d", "payload": {"track_id": "t1", "confidence": 0.92, "bbox": [0.4, 0.3, 0.2, 0.3]}}}
 {"rec_v": "0.1", "t_ms": 1900, "topic": "sancho/body/vision/evt/person_entered", "retained": false, "raw": "{esto no es JSON"}
 ```
 

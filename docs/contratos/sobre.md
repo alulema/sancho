@@ -9,7 +9,7 @@ Todo mensaje publicado en el bus va dentro de este sobre, serializado como JSON.
   "ts": "2026-11-03T18:20:00.123Z",
   "source": "body",
   "type": "vision.person_entered",
-  "trace_id": "9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d",
+  "trace_id": "9a8b7c6d-5e4f-4a3b-8c1d-0e9f8a7b6c5d",
   "payload": {}
 }
 ```

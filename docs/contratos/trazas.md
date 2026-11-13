@@ -10,7 +10,7 @@ Cada decisión del asistente deja una traza. Es la base del registro auditable, 
 {
   "v": "0.1",
   "ts": "2026-11-03T18:20:00.180Z",
-  "trace_id": "9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d",
+  "trace_id": "9a8b7c6d-5e4f-4a3b-8c1d-0e9f8a7b6c5d",
   "span_id": "c1d2e3f4-0000-4000-8000-000000000001",
   "parent_span_id": null,
   "component": "brain",
