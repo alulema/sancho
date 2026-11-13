@@ -1,4 +1,4 @@
-# Contrato: trazas — v0.1
+# Contrato: trazas — v0.2
 
 Cada decisión del asistente deja una traza. Es la base del registro auditable, del XAI y del banco de evaluación.
 
@@ -37,5 +37,13 @@ Cada decisión del asistente deja una traza. Es la base del registro auditable, 
 | `level` | Nivel de enrutamiento (`L0`–`L3`); en E0 siempre `L0` |
 | `inputs` / `outputs` | Referencias a mensajes, no copias de su contenido |
 | `decision` / `reason` / `alternatives` | Qué se decidió, por qué y qué otras opciones había |
-| `duration_ms` | Tiempo del paso |
+| `ts` | Inicio del paso: para un paso que responde a un mensaje, el momento en que se recibió |
+| `duration_ms` | Tiempo del paso; el fin es `ts` + `duration_ms` |
 | `cost` | Costo en dinero o tokens; `null` en E0 |
+
+## Trazas que exige la medición de latencia de E0
+
+| Componente | `kind` | `name` | `ts` | `inputs` / `outputs` |
+|---|---|---|---|---|
+| brain | `decision` | `greet_on_entry` | Recepción de `person_entered` | El evento / el `say`, si lo hubo |
+| body | `action` | `speak` | Recepción de `say` | El `say` / los `status` publicados |

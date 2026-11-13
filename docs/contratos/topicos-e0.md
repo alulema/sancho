@@ -1,4 +1,4 @@
-# Contrato: tópicos de E0 — v0.2
+# Contrato: tópicos de E0 — v0.3
 
 ## Convenciones
 
@@ -12,11 +12,20 @@
 
 | Tópico | Tipo | Publica | Recibe | Payload |
 |---|---|---|---|---|
-| `sancho/body/vision/evt/person_entered` | evento | body | brain | `track_id` (string), `confidence` (0–1), `bbox` ([x, y, w, h] normalizados 0–1) |
+| `sancho/body/vision/evt/person_entered` | evento | body | brain | `track_id` (string), `confidence` (0–1), `bbox` ([x, y, w, h] normalizados 0–1), `first_seen_ts` y `frame_ts` (opcionales; ver *Marcas para medir latencia*) |
 | `sancho/body/vision/evt/person_left` | evento | body | brain | `track_id`, `duration_s` (número) |
 | `sancho/body/speech/cmd/say` | comando | brain | body | `say_id` (UUID), `text` (string), `lang` (`es`, `en`, `pt`), `priority` (`normal`, `high`) |
-| `sancho/body/speech/evt/status` | evento | body | brain | `say_id`, `state` (`started`, `finished`, `error`), `error` (string, opcional) |
+| `sancho/body/speech/evt/status` | evento | body | brain | `say_id`, `state` (`started`, `finished`, `error`), `error` (string, opcional). `started` se publica cuando empieza a sonar el audio, después de la síntesis |
 | `sancho/sys/<componente>/health` | estado retenido | cada servicio | todos | `status` (`online`, `offline`), `version` (string), `uptime_s` (número), `last_will` (booleano, opcional) |
+
+## Marcas para medir latencia
+
+`person_entered` lleva dos marcas opcionales, en el mismo formato que `ts` del sobre. El cuerpo debe enviarlas siempre que pueda obtenerlas:
+
+- `first_seen_ts`: momento de captura del primer cuadro en que se detectó a esa persona (`track_id`).
+- `frame_ts`: momento de captura del cuadro que confirmó la entrada al superar la histéresis.
+
+Ambas son momentos de **captura** del cuadro, no de su procesamiento, convertidos a UTC con el reloj del sistema. Se cumple `first_seen_ts` ≤ `frame_ts` ≤ `ts`. Ninguna mide el retardo del propio sensor, que queda fuera de lo que el software puede ver.
 
 ## Salud y *last will*
 
