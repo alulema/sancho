@@ -208,6 +208,12 @@ def test_missing_payload_field_is_rejected():
         decode(LEFT, as_bytes(message))
 
 
+def test_oversized_message_cannot_be_encoded():
+    payload = Say(say_id=uuid.uuid4(), text="a" * 70_000, lang="es", priority="normal")
+    with pytest.raises(InvalidMessage, match="too large"):
+        encode(make_message(SAY, "brain", payload))
+
+
 def test_type_must_match_topic():
     with pytest.raises(InvalidMessage, match="does not match"):
         decode(LEFT, as_bytes(raw_message(ENTERED)))

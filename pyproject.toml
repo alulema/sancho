@@ -6,6 +6,7 @@ readme = "README.md"
 # Python 3.12 para todos los componentes de E0 (ADR-0012).
 requires-python = ">=3.12"
 dependencies = [
+    "paho-mqtt>=2.2.0",
     "pydantic>=2.14.3",
     "pyyaml>=6.0.3",
 ]
@@ -16,7 +17,7 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests", "contracts", "body", "brain", "sim", "eval"]
 pythonpath = ["."]
-addopts = "--strict-markers -m 'not nano'"
+addopts = "--strict-markers -rs -m 'not nano'"
 markers = [
     "nano: requiere el Jetson Nano (cámara CSI, GPU o TensorRT); excluida por defecto",
 ]

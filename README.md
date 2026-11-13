@@ -21,4 +21,12 @@ Requiere [uv](https://docs.astral.sh/uv/) y `make`. uv instala Python y las depe
 
 Las pruebas que requieren el Nano llevan `@pytest.mark.nano`; se corren allí con `uv run pytest -m nano`.
 
+Las pruebas del bus (`tests/test_broker.py`) levantan un broker Mosquitto real con la misma imagen que usa el Nano. Necesitan Docker y la imagen ya descargada; nunca la descargan solas, y sin ella se saltan indicando el comando:
+
+```
+docker pull eclipse-mosquitto@sha256:75d6662dee52c947dc9dd9c29f1d8d7ffef78ddaf38001caa09755681e8bbc98
+```
+
+Con `MOSQUITTO=/ruta/a/mosquitto` usan un binario nativo en su lugar.
+
 Las instrucciones para correr la simulación y desplegar al Nano se agregan durante E0.

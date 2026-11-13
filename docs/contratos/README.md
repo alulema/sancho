@@ -5,7 +5,7 @@ Formatos que comparten los componentes. **El código implementa estos contratos;
 | Contrato | Archivo | Versión |
 |---|---|---|
 | Sobre común de mensajes | `sobre.md` | 0.1 |
-| Tópicos de E0 | `topicos-e0.md` | 0.3 |
+| Tópicos de E0 | `topicos-e0.md` | 0.4 |
 | Trazas | `trazas.md` | 0.2 |
 | Casos del banco de evaluación | `casos-banco.md` | 0.2 |
 | Grabaciones del bus | `grabaciones.md` | 0.1 |

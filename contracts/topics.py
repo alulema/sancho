@@ -1,4 +1,4 @@
-"""E0 topics and their payloads (docs/contratos/topicos-e0.md, v0.3)."""
+"""E0 topics and their payloads (docs/contratos/topicos-e0.md, v0.4)."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -8,7 +8,7 @@ from pydantic import Field, model_validator
 
 from contracts.types import UUID4, Timestamp, WireModel
 
-TOPICS_VERSION = "0.3"
+TOPICS_VERSION = "0.4"
 
 UnitFloat = Annotated[float, Field(ge=0, le=1)]
 

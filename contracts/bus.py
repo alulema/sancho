@@ -19,6 +19,11 @@ from contracts.types import utc_now
 
 _LOG_EXCERPT_CHARS = 200
 
+# topicos-e0.md v0.4: no message above 64 KiB. The broker enforces it on the whole
+# MQTT packet; encode keeps a margin for the topic and the packet headers.
+MAX_PACKET_BYTES = 65536
+_PACKET_OVERHEAD_BYTES = 1024
+
 
 class InvalidMessage(Exception):
     def __init__(self, topic: str, reason: str):
@@ -102,7 +107,10 @@ def encode(message: Message) -> bytes:
     _validate(message.topic, message.envelope)
     data = message.envelope.model_dump(mode="json", exclude_none=True)
     data["payload"] = message.envelope.payload
-    return json.dumps(data, separators=(",", ":"), ensure_ascii=False).encode()
+    encoded = json.dumps(data, separators=(",", ":"), ensure_ascii=False).encode()
+    if len(encoded) + len(message.topic.encode()) + _PACKET_OVERHEAD_BYTES > MAX_PACKET_BYTES:
+        raise InvalidMessage(message.topic, f"message too large ({len(encoded)} bytes)")
+    return encoded
 
 
 def decode(topic: str, data: bytes | str) -> Message:

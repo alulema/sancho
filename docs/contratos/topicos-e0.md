@@ -1,4 +1,4 @@
-# Contrato: tópicos de E0 — v0.3
+# Contrato: tópicos de E0 — v0.4
 
 ## Convenciones
 
@@ -52,4 +52,5 @@ El broker de producción, en el Nano, no tiene credenciales para los componentes
 ## Reglas
 
 - Ningún mensaje contiene imágenes, video ni audio.
+- Ningún mensaje supera 64 KiB (65 536 bytes) en total. El broker rechaza los más grandes y desconecta al cliente que los envía (ADR-0014).
 - `bbox` y `confidence` son metadatos; no permiten reconstruir la imagen.
