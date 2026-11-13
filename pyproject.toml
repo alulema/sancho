@@ -3,8 +3,8 @@ name = "sancho"
 version = "0.0.0"
 description = "Asistente personal con presencia física y digital."
 readme = "README.md"
-# Provisional hasta el ADR de T2, que fija la versión de Python por componente (ADR-0005).
-requires-python = ">=3.10"
+# Python 3.12 para todos los componentes de E0 (ADR-0012).
+requires-python = ">=3.12"
 dependencies = []
 
 [tool.uv]
@@ -20,7 +20,7 @@ markers = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
