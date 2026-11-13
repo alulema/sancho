@@ -39,7 +39,7 @@ Aceptada por el usuario el 2026-11-13.
 - **Mosquitto con `acl_file` acepta cualquier suscripción** (SUBACK `Granted QoS 1`) y filtra cada mensaje al entregarlo. La garantía real, que nada llegue a quien no tiene permiso de lectura, está probada; un componente no puede fiarse del SUBACK para saber si tiene permiso.
 - Las publicaciones prohibidas reciben PUBACK `0x87 Not authorized` y no se entregan. `BusService` además las rechaza antes de enviarlas.
 - Sin TLS, las contraseñas viajan en claro por la red local. Es lo que admite E0 (`docs/diseno.md` §5.9: autenticación y solo red local); TLS llega con la exposición que lo requiera.
-- **Pendiente en el Nano:** levantar el contenedor, decidir cómo escucha solo en la red local (`127.0.0.1` más la interfaz `wlan0`, o la IP reservada en el router) y verificar el arranque. La supervisión con systemd es de T12.
+- **En el Nano** escucha en `127.0.0.1` y en la interfaz `wlan0` (`bind_interface`), no en las redes de Docker. `bind_interface` toma la IP al arrancar, así que conviene reservarla en el router. La supervisión con systemd es de T12.
 
 ## Evidencia
 
@@ -49,5 +49,7 @@ En el NUC (Ubuntu 26.04, Docker 29.7.2), 2026-11-13: 41 pruebas de aceptación c
 - Cada rol publica en sus tópicos, y recibe `0x87` en 9 combinaciones ajenas.
 - Al matar con `SIGKILL` un servicio (`brain` o `body`), su *last will* aparece en menos de 2 s, valida contra el contrato y queda retenido para quien se suscriba después.
 - El broker de producción no acepta a `sim`, `replay` ni `eval`.
+
+En el Nano (modo 5W), `deploy/broker/smoke_check.py` con las credenciales de producción: 8/8 comprobaciones, *last will* 0,02 s después de `SIGKILL`. Desde el NUC, sin credenciales: `Not authorized`.
 
 Las suscripciones fuera de permiso se aceptan pero no entregan nada (sonda en `tests/test_broker.py::test_role_does_not_receive_outside_its_topics`). Bitácora: `docs/bitacora/2026-11-13-t4-bus.md`.
