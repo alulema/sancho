@@ -1,5 +1,7 @@
 """Trace records (docs/contratos/trazas.md, v0.2), one JSON object per line."""
 
+import threading
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -57,3 +59,33 @@ def parse_trace_line(line: str) -> TraceRecord:
         return TraceRecord.model_validate_json(line)
     except ValidationError as error:
         raise InvalidTrace(str(error)) from None
+
+
+class TraceWriter:
+    """Appends traces to `<directory>/<component>-<UTC day>.jsonl`, one file per day.
+
+    Each record is validated (it is a TraceRecord) and flushed as it is written, so a
+    crash loses at most the line being written.
+    """
+
+    def __init__(self, directory: Path, component: str):
+        self.directory = Path(directory)
+        self.component = component
+        self._lock = threading.Lock()
+
+    def path_for(self, record: TraceRecord) -> Path:
+        return self.directory / f"{self.component}-{record.ts:%Y-%m-%d}.jsonl"
+
+    def write(self, record: TraceRecord) -> None:
+        if record.component != self.component:
+            raise ValueError(f"trace from {record.component!r} in {self.component!r} writer")
+        line = record.to_jsonl()
+        with self._lock:
+            self.directory.mkdir(parents=True, exist_ok=True)
+            with self.path_for(record).open("a", encoding="utf-8") as file:
+                file.write(line)
+
+
+def read_traces(path: Path) -> list[TraceRecord]:
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    return [parse_trace_line(line) for line in lines if line.strip()]

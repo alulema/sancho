@@ -49,3 +49,6 @@ dist/
 .idea/
 .vscode/
 .claude/settings.local.json
+
+# Salidas de make sim
+.sim/

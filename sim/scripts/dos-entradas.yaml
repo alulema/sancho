@@ -1,0 +1,12 @@
+description: >-
+  Una persona entra, sale y vuelve a entrar a los cinco segundos. Con la ventana de
+  saludo por omisión (10 minutos) debe haber un solo saludo y dos decisiones.
+steps:
+  - at_ms: 0
+    enter: { track_id: t1 }
+  - at_ms: 3000
+    leave: { track_id: t1 }
+  - at_ms: 5000
+    enter: { track_id: t2, confidence: 0.85 }
+  - at_ms: 8000
+    leave: { track_id: t2 }

@@ -6,9 +6,11 @@ retained last will in the common envelope when connecting, publish `online` on e
 """
 
 import logging
+import queue
 import threading
 import time
 from collections.abc import Callable
+from datetime import datetime
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
@@ -17,6 +19,7 @@ from paho.mqtt.reasoncodes import ReasonCode
 from contracts.acl import HEALTH_OF_ROLE, ROLES, may_publish
 from contracts.bus import Message, encode, make_message, receive
 from contracts.topics import Health, health_topic
+from contracts.types import utc_now
 
 QOS = 1
 Handler = Callable[[Message], None]
@@ -56,6 +59,7 @@ class BusService:
         self._acks: dict[int, ReasonCode | list[ReasonCode]] = {}
         self._unawaited: set[int] = set()  # acks nobody waits for (sent on reconnect)
         self._ack_ready = threading.Condition()
+        self._network_thread = threading.local()  # set while a handler runs
 
         self._client = mqtt.Client(
             callback_api_version=CallbackAPIVersion.VERSION2,
@@ -101,6 +105,13 @@ class BusService:
     # --- messages ---------------------------------------------------------------
 
     def publish(self, message: Message) -> None:
+        """Publishes and waits for the broker's acknowledgement.
+
+        Not callable from a handler: handlers run on the network thread, which is the
+        one that would deliver the acknowledgement. Hand the message to another thread.
+        """
+        if getattr(self._network_thread, "active", False):
+            raise BusError("publish from a handler would deadlock; use another thread")
         if not may_publish(self.role, message.topic):
             raise PublishDenied(f"{self.role} may not publish on {message.topic}")
         info = self._client.publish(
@@ -148,11 +159,14 @@ class BusService:
             return
         for pattern, handler in list(self._handlers.items()):
             if mqtt.topic_matches_sub(pattern, msg.topic):
+                self._network_thread.active = True
                 try:
                     handler(message)
                 except Exception:
                     # A handler bug must not stop the network loop.
                     self.logger.exception("handler for %s failed on %s", pattern, msg.topic)
+                finally:
+                    self._network_thread.active = False
 
     def _on_ack(self, client, userdata, mid, reason, properties) -> None:
         with self._ack_ready:
@@ -171,3 +185,23 @@ class BusService:
             if not self._ack_ready.wait_for(lambda: mid in self._acks, self._timeout_s):
                 raise BusError(f"no acknowledgement from the broker for message {mid}")
             return self._acks.pop(mid)
+
+
+class Inbox:
+    """A handler that queues messages with their reception time for another thread.
+
+    Components subscribe with `inbox.put` and process `inbox.get()` on their own
+    thread, so they can publish (and wait for acknowledgements) while handling.
+    """
+
+    def __init__(self):
+        self._queue: queue.Queue[tuple[Message, datetime]] = queue.Queue()
+
+    def put(self, message: Message) -> None:
+        self._queue.put((message, utc_now()))
+
+    def get(self, timeout_s: float | None = None) -> tuple[Message, datetime] | None:
+        try:
+            return self._queue.get(timeout=timeout_s)
+        except queue.Empty:
+            return None

@@ -17,7 +17,8 @@ Requiere [uv](https://docs.astral.sh/uv/) y `make`. uv instala Python y las depe
 | `make test` | Corre las pruebas, sin las que requieren el Nano |
 | `make lint` | Revisa estilo y formato sin cambiar archivos |
 | `make format` | Aplica el formato |
-| `make bench`, `make sim`, `make deploy-nano` | Pendientes (T11, T8 y T12); por ahora fallan con un aviso |
+| `make sim` | Corre la cadena completa sin hardware: broker, cuerpo simulado y orquestador |
+| `make bench`, `make deploy-nano` | Pendientes (T11 y T12); por ahora fallan con un aviso |
 
 Las pruebas que requieren el Nano llevan `@pytest.mark.nano`; se corren allí con `uv run pytest -m nano`.
 
@@ -29,4 +30,16 @@ docker pull eclipse-mosquitto@sha256:75d6662dee52c947dc9dd9c29f1d8d7ffef78ddaf38
 
 Con `MOSQUITTO=/ruta/a/mosquitto` usan un binario nativo en su lugar.
 
-Las instrucciones para correr la simulación y desplegar al Nano se agregan durante E0.
+## Simulación
+
+`make sim` levanta un broker de pruebas desechable (la misma imagen, con contraseñas nuevas en un directorio temporal que se borra al terminar), el orquestador (`python -m brain`) y el cuerpo simulado (`python -m sim.body`). El cuerpo simulado reproduce un guion de entradas y salidas, y su TTS solo registra la frase y publica `started` y `finished`. Muestra lo que pasa por el bus y un resumen; los logs y las trazas quedan en `.sim/<hora UTC>/`.
+
+```
+make sim
+make sim SIM_ARGS="--greeting-window-min 0.05"
+make sim SIM_ARGS="--script sim/scripts/otro.yaml"
+```
+
+Los guiones están en `sim/scripts/`; el formato se describe en `sim/script.py`. Necesita lo mismo que las pruebas del bus: Docker y la imagen ya descargada, o `MOSQUITTO=…`.
+
+Las instrucciones para desplegar al Nano se agregan con T12.

@@ -1,15 +1,10 @@
 """T4 acceptance against a real Mosquitto broker started with the generated config.
 
-By default the broker runs in the same pinned image as on the Nano, so Docker and
-that image are needed (the tests never pull it). MOSQUITTO=/path/to/mosquitto runs a
-native binary instead (Ubuntu's AppArmor profile stops /usr/sbin/mosquitto from
-reading a config outside /etc/mosquitto). Without either, the tests are skipped.
+The broker comes from deploy/broker/local.py: the pinned image of the Nano (never
+pulled by the tests) or MOSQUITTO=/path/to/mosquitto. Without either, they are skipped.
 """
 
-import os
-import shutil
 import signal
-import socket
 import subprocess
 import sys
 import textwrap
@@ -26,77 +21,18 @@ from contracts.acl import ROLES, roles_for
 from contracts.bus import decode, encode, make_message
 from contracts.service import BusError, BusService, PublishDenied
 from contracts.topics import PersonEntered, Say, health_topic
-from deploy.broker.broker_config import BROKER_DIR_IN_IMAGE, MOSQUITTO_IMAGE, generate
-
-MOSQUITTO = os.environ.get("MOSQUITTO")
-
-
-def _image_available() -> bool:
-    """Never pulls: tests must not download anything by themselves."""
-    if not shutil.which("docker"):
-        return False
-    inspect = ["docker", "image", "inspect", MOSQUITTO_IMAGE]
-    return subprocess.run(inspect, capture_output=True).returncode == 0
-
+from deploy.broker.broker_config import generate
+from deploy.broker.local import PULL_HINT, LocalBroker, broker_available
 
 pytestmark = pytest.mark.skipif(
-    not MOSQUITTO and not _image_available(),
-    reason=f"no broker: run `docker pull {MOSQUITTO_IMAGE}` or set MOSQUITTO",
+    not broker_available(), reason=f"no broker: run `{PULL_HINT}` or set MOSQUITTO"
 )
 
 ROOT = Path(__file__).resolve().parent.parent
 ENTERED = "sancho/body/vision/evt/person_entered"
 SAY = "sancho/body/speech/cmd/say"
 DELIVERY_WAIT_S = 0.5
-
-
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-class Broker:
-    def __init__(self, directory: Path, environment: str):
-        self.port = free_port()
-        self.container = None
-        listeners = [f"127.0.0.1:{self.port}"]
-        if MOSQUITTO:
-            self.passwords = generate(directory, environment, listeners)
-            command = [MOSQUITTO, "-c", str(directory / "mosquitto.conf")]
-        else:
-            self.passwords = generate(
-                directory, environment, listeners, broker_dir=BROKER_DIR_IN_IMAGE
-            )
-            self.container = f"sancho-test-broker-{uuid.uuid4().hex[:8]}"
-            command = [
-                "docker", "run", "--rm", "--name", self.container, "--network", "host",
-                "--user", f"{os.getuid()}:{os.getgid()}",
-                "-v", f"{directory}:{BROKER_DIR_IN_IMAGE}:ro",
-                MOSQUITTO_IMAGE, "mosquitto", "-c", f"{BROKER_DIR_IN_IMAGE}/mosquitto.conf",
-            ]  # fmt: skip
-        self.log = directory.parent / f"{directory.name}-broker.log"
-        with self.log.open("w") as log:
-            self.process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
-        deadline = time.monotonic() + 15
-        while time.monotonic() < deadline:
-            if self.process.poll() is not None:
-                raise RuntimeError(f"mosquitto exited:\n{self.log.read_text()}")
-            try:
-                socket.create_connection(("127.0.0.1", self.port), timeout=0.2).close()
-                return
-            except OSError:
-                time.sleep(0.05)
-        raise RuntimeError("mosquitto did not start")
-
-    def service(self, role: str, **kwargs) -> BusService:
-        return BusService(role, self.passwords[role], port=self.port, **kwargs)
-
-    def stop(self) -> None:
-        if self.container:
-            subprocess.run(["docker", "rm", "-f", self.container], capture_output=True)
-        self.process.terminate()
-        self.process.wait(5)
+Broker = LocalBroker
 
 
 @pytest.fixture(scope="module")
@@ -447,3 +383,22 @@ def test_production_broker_has_no_test_only_roles(tmp_path, raw):
         assert set(ROLES) - set(prod.passwords) == {"sim", "replay", "eval"}
     finally:
         prod.stop()
+
+
+def test_publishing_from_a_handler_fails_instead_of_deadlocking(broker):
+    errors = []
+    got = threading.Event()
+
+    def handler(message):
+        try:
+            brain.publish(say_message())
+        except BusError as error:
+            errors.append(error)
+        got.set()
+
+    with broker.service("brain") as brain, broker.service("body") as body:
+        brain.subscribe(ENTERED, handler)
+        body.publish(entered_message())
+        assert got.wait(5)
+        assert "deadlock" in str(errors[0])
+        brain.publish(say_message())  # still fine outside the handler
