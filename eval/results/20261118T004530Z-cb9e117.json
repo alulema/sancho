@@ -1,0 +1,185 @@
+{
+  "date": "2026-11-18T00:45:30.491Z",
+  "commit": "cb9e117",
+  "dirty": false,
+  "machine": "Linux x86_64",
+  "python": "3.12.13",
+  "cases_version": "0.3",
+  "summary": {
+    "pass": 6,
+    "fail": 0,
+    "error": 0
+  },
+  "cases": [
+    {
+      "id": "e0-brain-down-no-greeting",
+      "file": "eval/cases/e0-brain-down-no-greeting.yaml",
+      "result": "pass",
+      "duration_ms": 3851.9,
+      "checks": [
+        {
+          "kind": "expect",
+          "topic": "sancho/sys/brain/health",
+          "within_ms": 2000,
+          "payload": {
+            "status": "offline",
+            "last_will": true
+          },
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 3000,
+          "payload": null,
+          "limit": 0,
+          "observed": 0,
+          "ok": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "e0-greet-again-after-window",
+      "file": "eval/cases/e0-greet-again-after-window.yaml",
+      "result": "pass",
+      "duration_ms": 7020.8,
+      "checks": [
+        {
+          "kind": "expect",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 6000,
+          "payload": null,
+          "limit": 2,
+          "observed": 2,
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 6000,
+          "payload": null,
+          "limit": 2,
+          "observed": 2,
+          "ok": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "e0-greet-single-entry",
+      "file": "eval/cases/e0-greet-single-entry.yaml",
+      "result": "pass",
+      "duration_ms": 4132.3,
+      "checks": [
+        {
+          "kind": "expect",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 2000,
+          "payload": {
+            "lang": "es",
+            "priority": "normal"
+          },
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "topic": "sancho/body/speech/evt/status",
+          "within_ms": 3000,
+          "payload": {
+            "state": "finished"
+          },
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 3000,
+          "payload": null,
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "e0-greet-twice-within-window",
+      "file": "eval/cases/e0-greet-twice-within-window.yaml",
+      "result": "pass",
+      "duration_ms": 8953.3,
+      "checks": [
+        {
+          "kind": "expect",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 8000,
+          "payload": null,
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 8000,
+          "payload": null,
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "e0-invalid-message-ignored",
+      "file": "eval/cases/e0-invalid-message-ignored.yaml",
+      "result": "pass",
+      "duration_ms": 3104.9,
+      "checks": [
+        {
+          "kind": "expect",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 2000,
+          "payload": null,
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 2000,
+          "payload": null,
+          "limit": 1,
+          "observed": 1,
+          "ok": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "e0-invalid-payload-not-greeted",
+      "file": "eval/cases/e0-invalid-payload-not-greeted.yaml",
+      "result": "pass",
+      "duration_ms": 3091.4,
+      "checks": [
+        {
+          "kind": "forbid",
+          "topic": "sancho/body/speech/cmd/say",
+          "within_ms": 2000,
+          "payload": null,
+          "limit": 0,
+          "observed": 0,
+          "ok": true
+        }
+      ],
+      "error": null
+    }
+  ]
+}
