@@ -1,0 +1,28 @@
+id: e0-invalid-message-ignored
+version: "0.3"
+description: >-
+  JSON roto y un sobre inválido se rechazan; el orquestador sigue funcionando y saluda
+  a la siguiente entrada válida.
+tags: [e0, validation, robustness]
+lang: es
+when:
+  - at_ms: 0
+    publish_raw:
+      topic: sancho/body/vision/evt/person_entered
+      text: "{esto no es JSON"
+  - at_ms: 200
+    publish_raw:
+      topic: sancho/body/vision/evt/person_entered
+      text: '{"v": "0.1", "type": "vision.person_entered", "payload": {}}'
+  - at_ms: 500
+    publish:
+      topic: sancho/body/vision/evt/person_entered
+      payload: { track_id: "t1", confidence: 0.92, bbox: [0.4, 0.3, 0.2, 0.3] }
+expect:
+  - topic: sancho/body/speech/cmd/say
+    count: 1
+    within_ms: 2000
+forbid:
+  - topic: sancho/body/speech/cmd/say
+    count_gt: 1
+    within_ms: 2000

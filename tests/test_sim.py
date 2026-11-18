@@ -172,3 +172,32 @@ def test_chain_greets_again_after_the_window(tmp_path):
     assert result.ok
     assert len(result.on(SAY)) == 2
     assert [d.decision for d in result.decisions] == [GREET, GREET]
+
+
+# --- recording and replay (T9) ------------------------------------------------------
+
+
+@needs_broker
+def test_a_recorded_session_replays_to_the_same_decisions(tmp_path):
+    from sim.rerun import differences, rerun
+
+    original = simulate(DEFAULT_SCRIPT, tmp_path, synth_ms=50, speech_ms=200, linger_ms=500,
+                        quiet=True)  # fmt: skip
+    assert original.ok and original.recording.exists()
+    replayed = rerun(original.recording, tmp_path)
+    assert replayed.exit_code == 0
+    # Two entries, two exits, started and finished (all body events); no say, no health.
+    assert replayed.replayed == 6
+    assert [d.decision for d in replayed.decisions] == [GREET, IGNORE]
+    assert differences(original.decisions, replayed.decisions) == []
+
+
+@needs_broker
+def test_replay_with_another_window_is_detected_as_different(tmp_path):
+    from sim.rerun import differences, rerun
+
+    original = simulate(DEFAULT_SCRIPT, tmp_path, synth_ms=10, speech_ms=10, linger_ms=300,
+                        quiet=True)  # fmt: skip
+    replayed = rerun(original.recording, tmp_path, config={"greeting_window_min": 0.01})
+    assert [d.decision for d in replayed.decisions] == [GREET, GREET]
+    assert len(differences(original.decisions, replayed.decisions)) == 1

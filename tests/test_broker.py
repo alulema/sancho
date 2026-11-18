@@ -402,3 +402,41 @@ def test_publishing_from_a_handler_fails_instead_of_deadlocking(broker):
         assert got.wait(5)
         assert "deadlock" in str(errors[0])
         brain.publish(say_message())  # still fine outside the handler
+
+
+def test_raw_subscription_receives_invalid_messages_too(broker):
+    received = []
+    got = threading.Event()
+
+    def raw_handler(topic, data, retained):
+        received.append((topic, data, retained))
+        got.set()
+
+    with broker.service("recorder") as recorder, broker.service("eval") as injector:
+        recorder.subscribe_raw("sancho/body/#", raw_handler)
+        injector.publish_raw(ENTERED, b"{not json")
+        assert got.wait(5)
+    assert received == [(ENTERED, b"{not json", False)]
+
+
+def test_validated_and_raw_handlers_share_one_subscription(broker):
+    valid, raw_seen = [], []
+    with broker.service("recorder") as recorder, broker.service("eval") as injector:
+        # Not sancho/#: the shared broker holds other tests' retained health messages.
+        recorder.subscribe_raw("sancho/body/#", lambda t, d, r: raw_seen.append(d))
+        recorder.subscribe("sancho/body/#", valid.append)
+        injector.publish_raw(ENTERED, b"{not json")
+        injector.publish_raw(ENTERED, encode(entered_message()))
+        time.sleep(DELIVERY_WAIT_S)
+    assert len(raw_seen) == 2  # each message once, not once per handler kind
+    assert len(valid) == 1
+
+
+def test_services_cannot_publish_unvalidated_bytes(broker):
+    with broker.service("body") as body, pytest.raises(PublishDenied):
+        body.publish_raw(ENTERED, b"{not json")
+
+
+def test_publish_raw_still_obeys_the_acl(broker):
+    with broker.service("replay") as replay, pytest.raises(PublishDenied):
+        replay.publish_raw(SAY, encode(say_message()))

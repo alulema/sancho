@@ -4,32 +4,26 @@
         [--out .sim]
 
 Starts a throwaway test broker (deploy/broker/local.py), the brain, and the simulated
-body playing the script; prints what crosses the bus and a summary. Logs and traces
-stay in `.sim/<UTC time>/`; the broker's passwords live in a temporary directory that
-is deleted at the end.
+body playing the script; prints what crosses the bus and a summary. Logs, traces and
+the recording of the session (`recording.jsonl`, for `make replay`) stay in
+`.sim/<UTC time>/`; the broker's passwords live in a temporary directory that is
+deleted at the end.
 """
 
 import argparse
-import shutil
-import signal
 import subprocess
 import sys
-import tempfile
-import threading
-import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
 from contracts.bus import Message
-from contracts.topics import health_topic
-from contracts.traces import TraceRecord, read_traces
-from deploy.broker.local import PULL_HINT, LocalBroker, broker_available
+from contracts.traces import TraceRecord
+from deploy.broker.local import PULL_HINT, broker_available
+from sim.processes import ROOT, START_TIMEOUT_S, Session, read_component_traces
 from sim.script import load_script
 
-ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SCRIPT = ROOT / "sim" / "scripts" / "dos-entradas.yaml"
-START_TIMEOUT_S = 20
 
 
 @dataclass
@@ -44,59 +38,12 @@ class SimResult:
         return [m for m in self.messages if m.topic == topic]
 
     @property
+    def recording(self) -> Path:
+        return self.run_dir / "recording.jsonl"
+
+    @property
     def ok(self) -> bool:
         return all(code == 0 for code in self.exit_codes.values())
-
-
-def _describe(message: Message) -> str:
-    fields = message.payload.model_dump(mode="json", exclude_none=True)
-    shown = {k: v for k, v in fields.items() if k not in ("first_seen_ts", "frame_ts", "bbox")}
-    return " ".join(f"{k}={v}" for k, v in shown.items())
-
-
-class _Monitor:
-    def __init__(self, result: SimResult, quiet: bool):
-        self.result, self.quiet = result, quiet
-        self.start = time.monotonic()
-        self.changed = threading.Condition()
-
-    def __call__(self, message: Message) -> None:
-        with self.changed:
-            self.result.messages.append(message)
-            self.changed.notify_all()
-        if not self.quiet:
-            elapsed = time.monotonic() - self.start
-            print(f"  +{elapsed:6.2f} s  {message.topic:<40} {_describe(message)}", flush=True)
-
-    def wait_for(self, predicate, timeout_s: float) -> bool:
-        with self.changed:
-            return self.changed.wait_for(
-                lambda: any(predicate(m) for m in self.result.messages), timeout_s
-            )
-
-
-def _spawn(args: list[str], log: Path) -> subprocess.Popen:
-    with log.open("w") as out:
-        return subprocess.Popen(
-            [sys.executable, *args], cwd=ROOT, stdout=out, stderr=subprocess.STDOUT
-        )
-
-
-def _stop(process: subprocess.Popen, timeout_s: float = 10) -> int | None:
-    if process.poll() is None:
-        process.send_signal(signal.SIGTERM)
-        try:
-            process.wait(timeout_s)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-            return None
-    return process.returncode
-
-
-def _online(component: str):
-    topic = health_topic(component)
-    return lambda m: m.topic == topic and m.payload.status == "online"
 
 
 def simulate(
@@ -111,51 +58,24 @@ def simulate(
 ) -> SimResult:
     script = load_script(script_path)  # fail before starting anything
     run_dir = out / datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
-    traces = run_dir / "traces"
-    run_dir.mkdir(parents=True)
-    result = SimResult(run_dir)
-    monitor = _Monitor(result, quiet)
-    with tempfile.TemporaryDirectory(prefix="sancho-sim-") as tmp:
-        broker = LocalBroker(Path(tmp) / "broker", "test")
-        processes: dict[str, subprocess.Popen] = {}
+    config = {} if greeting_window_min is None else {"greeting_window_min": greeting_window_min}
+    with Session(run_dir, echo=not quiet) as session:
+        session.start_brain(config)
+        session.start_sim_body(
+            "--script", str(script_path), "--exit-after-script", "--synth-ms", str(synth_ms),
+            "--speech-ms", str(speech_ms), "--linger-ms", str(linger_ms),
+        )  # fmt: skip
+        budget = START_TIMEOUT_S + script.duration_ms / 1000 + linger_ms / 1000 + 30
         try:
-            with broker.service("recorder") as recorder:
-                recorder.subscribe("sancho/#", monitor)
-                port = str(broker.port)
-                brain_args = ["-m", "brain", "--port", port, "--traces", str(traces),
-                              "--password-file", str(broker.credential_file("brain"))]  # fmt: skip
-                if greeting_window_min is not None:
-                    brain_args += ["--greeting-window-min", str(greeting_window_min)]
-                processes["brain"] = _spawn(brain_args, run_dir / "brain.log")
-                if not monitor.wait_for(_online("brain"), START_TIMEOUT_S):
-                    raise RuntimeError(f"brain did not come online; see {run_dir / 'brain.log'}")
-                processes["sim"] = _spawn(
-                    ["-m", "sim.body", "--port", port, "--traces", str(traces),
-                     "--password-file", str(broker.credential_file("sim")),
-                     "--script", str(script_path), "--exit-after-script",
-                     "--synth-ms", str(synth_ms), "--speech-ms", str(speech_ms),
-                     "--linger-ms", str(linger_ms)],
-                    run_dir / "sim.log",
-                )  # fmt: skip
-                budget = START_TIMEOUT_S + script.duration_ms / 1000 + linger_ms / 1000 + 30
-                try:
-                    processes["sim"].wait(budget)
-                except subprocess.TimeoutExpired:
-                    pass
-                for name, process in processes.items():
-                    result.exit_codes[name] = _stop(process)
-                time.sleep(0.2)  # let the final health messages arrive
-        finally:
-            for process in processes.values():
-                if process.poll() is None:
-                    process.kill()
-            broker.stop()
-            if broker.log.exists():
-                shutil.copy(broker.log, run_dir / "broker.log")
-    for path in sorted(traces.glob("brain-*.jsonl")):
-        result.decisions += [t for t in read_traces(path) if t.kind == "decision"]
-    for path in sorted(traces.glob("sim-*.jsonl")):
-        result.actions += read_traces(path)
+            session.processes["sim"].wait(budget)
+        except subprocess.TimeoutExpired:
+            pass
+        session.stop("sim")
+        session.stop("brain")
+    result = SimResult(run_dir, session.watch.messages, exit_codes=session.exit_codes)
+    result.decisions = [t for t in read_component_traces(session.traces, "brain")
+                        if t.kind == "decision"]  # fmt: skip
+    result.actions = read_component_traces(session.traces, "sim")
     return result
 
 
@@ -179,7 +99,7 @@ def summary(result: SimResult) -> str:
             latency = (start.envelope.ts - event.envelope.ts).total_seconds() * 1000
             lines.append(f"  {event.payload.track_id}: entrada → started en {latency:.0f} ms")
     codes = ", ".join(f"{name} {code}" for name, code in result.exit_codes.items())
-    lines += [f"  códigos de salida: {codes}", f"  logs y trazas: {result.run_dir}"]
+    lines += [f"  códigos de salida: {codes}", f"  logs, trazas y grabación: {result.run_dir}"]
     return "\n".join(lines)
 
 

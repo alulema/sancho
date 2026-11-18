@@ -1,4 +1,4 @@
-# Contrato: casos del banco de evaluación — v0.2
+# Contrato: casos del banco de evaluación — v0.3
 
 Un caso describe una situación, lo que se le hace al sistema y lo que debe (o no debe) ocurrir.
 
@@ -8,7 +8,7 @@ Un caso describe una situación, lo que se le hace al sistema y lo que debe (o n
 
 ```yaml
 id: e0-greet-twice-within-window
-version: "0.2"
+version: "0.3"
 description: Dos entradas seguidas dentro de la ventana producen un solo saludo.
 tags: [e0, greeting, hysteresis]
 lang: es
@@ -45,8 +45,8 @@ forbid:
 | `lang` | Idioma del caso (`es`, `en`, `pt`); el banco crece en los tres |
 | `given` | Configuración y estado inicial |
 | `when` | Pasos a ejecutar, con tiempo relativo en milisegundos |
-| `expect` | Mensajes que deben aparecer: tópico, cantidad, plazo y, opcionalmente, `payload` |
-| `forbid` | Mensajes que no deben aparecer |
+| `expect` | Mensajes que deben aparecer: tópico, cantidad mínima (`count`), plazo y, opcionalmente, `payload` |
+| `forbid` | Mensajes que no deben aparecer: más de `count_gt` en el plazo es un fallo |
 
 ## Pasos de `when`
 
@@ -56,7 +56,7 @@ Cada paso lleva `at_ms` y exactamente una de estas acciones:
 |---|---|---|
 | `publish` | `topic`, `payload` | Envuelve el payload en un sobre válido y lo publica. **El runner no valida el payload**, para poder inyectar uno inválido |
 | `publish_raw` | `topic`, `text` | Publica el texto tal cual, sin sobre. Sirve para JSON roto o sobres inválidos |
-| `stop` | `component`, `mode` | Detiene un componente: `abrupt` lo mata sin aviso (dispara el *last will*) y `clean` pide un cierre ordenado |
+| `stop` | `component`, `mode` | Detiene un componente (`brain` o `body`): `abrupt` lo mata sin aviso (dispara el *last will*) y `clean` pide un cierre ordenado |
 | `start` | `component` | Arranca un componente detenido |
 
 ```yaml
@@ -96,11 +96,19 @@ forbid:
     within_ms: 3000
 ```
 
+## Componentes y configuración
+
+- Cada caso corre contra los servicios de E0: `brain` y `body`. En el NUC, `body` es el cuerpo simulado (`sim`), cuyo TTS publica `started` y `finished` sin sonido.
+- `given.config` se aplica al orquestador (`BrainConfig`). Una clave desconocida o un valor inválido es un **error** del caso, no un fallo del sistema.
+
 ## Verificación
 
 - `within_ms` se cuenta desde el inicio del caso, es decir, desde `at_ms: 0`.
+- `expect` pide **al menos** `count` mensajes en el plazo; el máximo se expresa con `forbid`. Por eso el primer ejemplo lleva los dos.
+- Se cuentan todos los mensajes del tópico, válidos o no, incluidos los que inyecta el propio caso.
+- El caso dura hasta el mayor `within_ms` (o el último `at_ms`, si es mayor) y se verifica al final.
 - `payload` en `expect` y `forbid` es una coincidencia parcial: los campos indicados deben ser iguales y los demás se ignoran.
 - Solo cuentan los mensajes publicados después del inicio del caso. Los retenidos que el broker entrega al suscribirse no cuentan.
 - Las duraciones de `given.config` admiten decimales, para probar ventanas sin esperar minutos reales: `greeting_window_min: 0.05` son 3 segundos.
 
-Los resultados de cada corrida (caso, resultado, tiempos) se guardan en `eval/results/` con la fecha y el commit.
+Los resultados de cada corrida (caso, resultado, tiempos) se guardan en `eval/results/` con la fecha y el commit. Cada caso termina en `pass`, `fail` (el sistema no cumplió) o `error` (el caso no pudo correr).

@@ -1,14 +1,14 @@
 """Rule L0 of E0: greet whoever enters, unless someone was greeted in the last N minutes.
 
-A pure decision with an injected clock, so it is tested without a bus or real time.
-The window starts when a greeting is actually published (`commit`): if publishing
-fails, the next entry tries again.
+A pure decision on the events themselves: the window is measured with the `ts` of
+the events, not with a local clock (docs/contratos/grabaciones.md), so a replayed
+session takes the same decisions. The window starts at the entry whose greeting was
+actually published (`commit`): if publishing fails, the next entry tries again.
 """
 
-import time
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal
 
 from pydantic import Field
@@ -36,7 +36,7 @@ class Decision:
     reason: str
     alternatives: list[str]
     say: Message | None
-    at: float  # clock reading when decided
+    at: datetime  # ts of the event decided on
 
 
 def _minutes(value: float) -> str:
@@ -45,15 +45,17 @@ def _minutes(value: float) -> str:
 
 
 class Greeter:
-    def __init__(self, config: BrainConfig, clock: Callable[[], float] = time.monotonic):
+    def __init__(self, config: BrainConfig):
         self.config = config
-        self._clock = clock
-        self._last_greeting: float | None = None
+        self._last_greeting: datetime | None = None
 
     def decide(self, entered: Message) -> Decision:
-        now = self._clock()
+        now = entered.envelope.ts
         window = _minutes(self.config.greeting_window_min)
-        since = None if self._last_greeting is None else now - self._last_greeting
+        since = None
+        if self._last_greeting is not None:
+            # An event older than the last greeting (out of order) counts as inside.
+            since = max((now - self._last_greeting).total_seconds(), 0.0)
         if since is not None and since < self.config.greeting_window_min * 60:
             reason = f"greeted {since:.1f} s ago, within the window of {window}"
             return Decision(IGNORE, reason, [GREET], None, now)
@@ -77,6 +79,6 @@ class Greeter:
         return Decision(GREET, reason, [IGNORE], say, now)
 
     def commit(self, decision: Decision) -> None:
-        """The greeting went out: the window starts at the moment it was decided."""
+        """The greeting went out: the window starts at the ts of that entry."""
         if decision.say is not None:
             self._last_greeting = decision.at

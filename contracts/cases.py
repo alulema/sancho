@@ -1,4 +1,4 @@
-"""Evaluation bench cases (docs/contratos/casos-banco.md, v0.2), one YAML file each.
+"""Evaluation bench cases (docs/contratos/casos-banco.md, v0.3), one YAML file each.
 
 The runner wraps `publish` payloads in an envelope without validating them, so
 invalid messages can be injected on purpose; here they are plain dictionaries.
@@ -12,7 +12,7 @@ from pydantic import AfterValidator, Field, ValidationError, field_validator, mo
 
 from contracts.types import AuthoredModel, check_version
 
-CASES_VERSION = "0.2"
+CASES_VERSION = "0.3"
 
 JsonScalar = str | int | float | bool | None
 

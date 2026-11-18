@@ -1,0 +1,21 @@
+id: e0-brain-down-no-greeting
+version: "0.3"
+description: Al caer el orquestador, su last will aparece en el bus y nadie saluda.
+tags: [e0, health, last-will]
+lang: es
+when:
+  - at_ms: 0
+    stop: { component: brain, mode: abrupt }
+  - at_ms: 1000
+    publish:
+      topic: sancho/body/vision/evt/person_entered
+      payload: { track_id: "t1", confidence: 0.92, bbox: [0.4, 0.3, 0.2, 0.3] }
+expect:
+  - topic: sancho/sys/brain/health
+    payload: { status: offline, last_will: true }
+    count: 1
+    within_ms: 2000
+forbid:
+  - topic: sancho/body/speech/cmd/say
+    count_gt: 0
+    within_ms: 3000

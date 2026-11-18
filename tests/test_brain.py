@@ -1,5 +1,7 @@
 """T7: the greeting rule, its window and the trace of each decision (no bus needed)."""
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from pydantic import ValidationError
 
@@ -13,11 +15,13 @@ from contracts.types import utc_now
 
 
 class Clock:
-    def __init__(self):
-        self.now = 1000.0
+    """Event time: each entry is stamped with `now`, which the tests move forward."""
 
-    def __call__(self) -> float:
-        return self.now
+    def __init__(self):
+        self.at = datetime(2026, 11, 13, 18, 0, tzinfo=UTC)
+
+    def advance(self, seconds: float) -> None:
+        self.at += timedelta(seconds=seconds)
 
 
 class FakeService:
@@ -31,18 +35,22 @@ class FakeService:
         self.published.append(decode(message.topic, encode(message)))
 
 
-def entered(track="t1"):
+CLOCK = Clock()
+
+
+def entered(track="t1", at=None):
     payload = PersonEntered(track_id=track, confidence=0.9, bbox=[0.4, 0.3, 0.2, 0.3])
-    return make_message(ENTERED, "body", payload)
+    return make_message(ENTERED, "body", payload, ts=at or CLOCK.at)
 
 
 @pytest.fixture
 def clock():
-    return Clock()
+    CLOCK.__init__()
+    return CLOCK
 
 
-def greeter(clock, window_min=10.0):
-    return Greeter(BrainConfig(greeting_window_min=window_min), clock)
+def greeter(clock, window_min=10.0):  # clock: entries are stamped with CLOCK.at
+    return Greeter(BrainConfig(greeting_window_min=window_min))
 
 
 def decide_and_commit(g, message):
@@ -74,7 +82,7 @@ def test_greeting_continues_the_flow_of_the_entry(clock):
 def test_two_entries_within_the_window_produce_one_greeting(clock):
     g = greeter(clock)
     assert decide_and_commit(g, entered("t1")).decision == GREET
-    clock.now += 5
+    clock.advance(5)
     second = decide_and_commit(g, entered("t2"))
     assert second.decision == IGNORE and second.say is None
     assert second.reason == "greeted 5.0 s ago, within the window of 10 minutes"
@@ -84,7 +92,7 @@ def test_two_entries_within_the_window_produce_one_greeting(clock):
 def test_entry_after_the_window_is_greeted_again(clock):
     g = greeter(clock, window_min=10)
     decide_and_commit(g, entered())
-    clock.now += 10 * 60
+    clock.advance(10 * 60)
     decision = g.decide(entered())
     assert decision.decision == GREET
     assert decision.reason == "no greeting in the last 10 minutes (last 600.0 s ago)"
@@ -93,17 +101,33 @@ def test_entry_after_the_window_is_greeted_again(clock):
 def test_ignored_entries_do_not_extend_the_window(clock):
     g = greeter(clock, window_min=1)
     decide_and_commit(g, entered())
-    clock.now += 50
+    clock.advance(50)
     decide_and_commit(g, entered())  # ignored
-    clock.now += 10
+    clock.advance(10)
     assert g.decide(entered()).decision == GREET  # 60 s after the greeting
 
 
 def test_uncommitted_greeting_does_not_start_the_window(clock):
     g = greeter(clock)
     g.decide(entered())  # publishing failed: no commit
-    clock.now += 1
+    clock.advance(1)
     assert g.decide(entered()).decision == GREET
+
+
+def test_window_uses_event_time_not_arrival_time(clock):
+    """A replay shifts every ts by the same amount: decisions must not change."""
+    g = greeter(clock, window_min=1)
+    later = clock.at + timedelta(days=3)
+    decide_and_commit(g, entered(at=later))
+    assert g.decide(entered(at=later + timedelta(seconds=30))).decision == IGNORE
+    assert g.decide(entered(at=later + timedelta(seconds=60))).decision == GREET
+
+
+def test_out_of_order_event_counts_as_inside_the_window(clock):
+    g = greeter(clock)
+    decide_and_commit(g, entered())
+    decision = g.decide(entered(at=clock.at - timedelta(seconds=5)))
+    assert decision.decision == IGNORE and "0.0 s ago" in decision.reason
 
 
 def test_zero_window_greets_every_entry(clock):
@@ -145,10 +169,9 @@ def all_traces(writer):
 def test_each_decision_has_its_trace(clock, traces):
     service = FakeService()
     brain = Brain(service, greeter(clock), traces)
-    first, second = entered("t1"), entered("t2")
+    first, second = entered("t1"), entered("t2", at=clock.at + timedelta(seconds=3))
     received = utc_now()
     brain.handle(first, received)
-    clock.now += 3
     brain.handle(second, utc_now())
 
     assert [m.topic for m in service.published] == [SAY]
@@ -182,7 +205,7 @@ def test_failed_publish_is_traced_and_retried_on_next_entry(clock, traces):
     assert "no acknowledgement" in error.reason
 
     service.fail = False
-    clock.now += 1
+    clock.advance(1)
     assert brain.handle(entered(), utc_now()).decision == GREET
     assert len(service.published) == 1
 

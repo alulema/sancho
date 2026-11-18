@@ -1,0 +1,31 @@
+id: e0-greet-again-after-window
+version: "0.3"
+description: >-
+  Quien sale y vuelve a entrar después de la ventana recibe otro saludo. La ventana
+  es de 0,05 minutos (3 s) para no esperar minutos reales.
+tags: [e0, greeting, window]
+lang: es
+given:
+  config:
+    greeting_window_min: 0.05
+when:
+  - at_ms: 0
+    publish:
+      topic: sancho/body/vision/evt/person_entered
+      payload: { track_id: "t1", confidence: 0.92, bbox: [0.4, 0.3, 0.2, 0.3] }
+  - at_ms: 1000
+    publish:
+      topic: sancho/body/vision/evt/person_left
+      payload: { track_id: "t1", duration_s: 1 }
+  - at_ms: 4000
+    publish:
+      topic: sancho/body/vision/evt/person_entered
+      payload: { track_id: "t2", confidence: 0.90, bbox: [0.4, 0.3, 0.2, 0.3] }
+expect:
+  - topic: sancho/body/speech/cmd/say
+    count: 2
+    within_ms: 6000
+forbid:
+  - topic: sancho/body/speech/cmd/say
+    count_gt: 2
+    within_ms: 6000

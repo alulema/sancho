@@ -9,7 +9,7 @@ from pathlib import Path
 DEFAULT_TRACES = Path("traces")
 
 
-def add_bus_arguments(parser: argparse.ArgumentParser) -> None:
+def add_bus_arguments(parser: argparse.ArgumentParser, *, traces: bool = True) -> None:
     parser.add_argument(
         "--password-file",
         type=Path,
@@ -18,7 +18,8 @@ def add_bus_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=1883)
-    parser.add_argument("--traces", type=Path, default=DEFAULT_TRACES, help="trace directory")
+    if traces:
+        parser.add_argument("--traces", type=Path, default=DEFAULT_TRACES, help="trace directory")
 
 
 def read_password(path: Path) -> str:

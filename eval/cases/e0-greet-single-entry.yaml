@@ -1,0 +1,23 @@
+id: e0-greet-single-entry
+version: "0.3"
+description: Una entrada produce un saludo, y el cuerpo lo dice hasta el final.
+tags: [e0, greeting]
+lang: es
+when:
+  - at_ms: 0
+    publish:
+      topic: sancho/body/vision/evt/person_entered
+      payload: { track_id: "t1", confidence: 0.92, bbox: [0.4, 0.3, 0.2, 0.3] }
+expect:
+  - topic: sancho/body/speech/cmd/say
+    payload: { lang: es, priority: normal }
+    count: 1
+    within_ms: 2000
+  - topic: sancho/body/speech/evt/status
+    payload: { state: finished }
+    count: 1
+    within_ms: 3000
+forbid:
+  - topic: sancho/body/speech/cmd/say
+    count_gt: 1
+    within_ms: 3000
