@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Provisional until T3 of SPEC_E0: mounts the SSD system partition and moves Docker's
 # data there, so container tests (T2) have room while the root filesystem stays on the
-# microSD. T3 undoes this: the mount, the data-root setting and the drop-in go away,
-# and images are pulled again.
+# microSD. Superseded by T3 (root_on_ssd.sh, ADR-0016): on the SSD root the mount,
+# the data-root setting and the drop-in go away, and the data stays where it is,
+# because it already sits at var/lib/docker of the SSD partition. Kept for the record.
 #
 # Usage: sudo docker_on_ssd.sh   (run prepare_ssd.sh first)
 set -euo pipefail
