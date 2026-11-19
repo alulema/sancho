@@ -13,6 +13,8 @@ dependencies = [
 
 [tool.uv]
 package = false
+# The body's group installs everywhere so `make test` covers it on the NUC.
+default-groups = ["dev", "body"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "contracts", "body", "brain", "sim", "eval"]
@@ -30,6 +32,14 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B"]
 
 [dependency-groups]
+# Body agent (T6): detection with onnxruntime (ADR-0017). piper-tts is GPL-3.0 and only
+# body/tts_worker.py imports it, in its own process (ADR-0018).
+body = [
+    "numpy>=2.5.5",
+    # The Nano (Ubuntu 18.04) has glibc 2.27; later onnxruntime wheels need 2.28.
+    "onnxruntime>=1.28.0,<1.29",
+    "piper-tts>=1.8.0",
+]
 dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.4",
