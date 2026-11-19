@@ -45,9 +45,23 @@ Ninguno de §18.
 
 ## Pendientes para la próxima sesión
 
-- Probar el SSD conectado directo al puerto USB 3 del Nano en lugar de detrás del concentrador.
 - Hacer persistente el *journal*, ahora que hay espacio.
 - La microSD conserva el sistema anterior (13 GB) como respaldo; se puede limpiar cuando el SSD lleve un tiempo estable.
+
+## Actualización 2026-11-19: SSD a USB 3
+
+El usuario le instaló al SSD un conector de alta velocidad. Ahora el enlace es de 5000 Mb/s (sigue detrás de un concentrador USB 3, con el controlador `usb-storage`, sin UAS) y el Nano arrancó desde él sin cambios en la configuración: el `PARTUUID` no depende del puerto.
+
+Modo 5 W, 3 corridas cada una, con E/S directa (sin caché):
+
+| Prueba | Resultado |
+|---|---|
+| Lectura secuencial (`dd iflag=direct`, archivo de 396 MiB) | 266–268 MB/s |
+| Escritura secuencial (`dd oflag=direct conv=fsync`, 1 GiB) | 235–240 MB/s |
+| Arranque | 5,6 s de kernel + 7,5 s de espacio de usuario = **13,1 s** (antes 18,9 s a USB 2.0 y 35,4 s desde la microSD; n = 1) |
+| Errores USB en `dmesg` | 0 |
+
+La copia de `copy` (18,7 MB/s con `rsync`, muchos archivos pequeños a USB 2.0) no es comparable con estas cifras secuenciales.
 
 ## Notas para artículos
 

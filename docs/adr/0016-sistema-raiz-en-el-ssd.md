@@ -13,7 +13,7 @@ Restricciones encontradas al revisar el Nano (L4T R32.7.6, kernel 4.9.337):
 - El Nano A02 no arranca directamente desde USB con este L4T: U-Boot lee `/boot/extlinux/extlinux.conf`, el kernel y el initrd de la microSD.
 - El initrd de serie ya trae el firmware del controlador USB (`xusb.bin`) y sabe montar `root=PARTUUID=…`. Reintenta durante 10 s; si no lo logra, se queda en una consola sin volver a la microSD.
 - `sudo` pide contraseña, así que los pasos que necesitan permisos de administrador los ejecuta el usuario.
-- El SSD está conectado a través de tres concentradores USB, a 480 Mb/s (USB 2.0).
+- El SSD estaba conectado a través de tres concentradores USB, a 480 Mb/s (USB 2.0). Desde el 2026-11-19 usa un conector USB 3 (5000 Mb/s).
 
 ## Opciones consideradas
 
@@ -38,7 +38,7 @@ Opción 1, con `deploy/nano/root_on_ssd.sh`:
 - Cualquier cambio de kernel, initrd o `extlinux.conf` se hace en `/mnt/microsd/boot`, no en `/boot`. Los paquetes retenidos impiden que apt lo haga por error. R32.7.6 es la última versión de JetPack 4, así que retenerlos cuesta poco.
 - **El Nano depende del SSD para funcionar.** Si el concentrador USB pierde alimentación, se cae todo el sistema y no solo Docker. Con la fuente de barril eso debería dejar de ser un riesgo; hasta entonces, modo 5 W.
 - La línea de comandos del kernel lleva dos `root=`: el `root=/dev/mmcblk0p1` que agrega el cargador en `${cbootargs}` y el `root=PARTUUID=` de la entrada. Funciona porque gana el último, tanto en el kernel como en el `init` del initrd (`tail -1`).
-- Queda por medir: si conviene conectar el SSD directo al puerto USB 3, y el tiempo de arranque con más de un reinicio (n = 1 en cada lado).
+- Queda por medir el tiempo de arranque con más de un reinicio (n = 1 en cada configuración).
 
 ## Evidencia
 
@@ -52,3 +52,4 @@ Opción 1, con `deploy/nano/root_on_ssd.sh`:
   - Docker usa `/var/lib/docker` con sus datos y el contenedor `sancho-broker` volvió solo; un cliente con el rol `recorder` se conectó con sus credenciales de producción.
   - `wlan0` recibió 192.168.0.122, la IP reservada.
 - Arranque desde el SSD: 5,5 s de kernel y 13,4 s de espacio de usuario, **18,9 s** en total, frente a 35,4 s desde la microSD; Docker tarda 4,5 s en lugar de 10 s. Con n = 1 no se sabe cuánto del kernel (18,1 s frente a 5,5 s) se debe al disco y cuánto a otra cosa del arranque anterior.
+- Con el conector USB 3 (2026-11-19, modo 5 W): lectura secuencial de 266–268 MB/s, escritura de 235–240 MB/s (E/S directa, 3 corridas) y arranque en **13,1 s**, sin cambiar la configuración.
